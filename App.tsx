@@ -8,6 +8,8 @@ import { styles } from './styles';
 
 import RNFS from 'react-native-fs';
 import { unzip } from 'react-native-zip-archive';
+import { useState } from 'react';
+import EpubReader from './EpubReader';
 
 async function pickAndProcessEpub() {
   try {
@@ -35,44 +37,21 @@ async function pickAndProcessEpub() {
 
     // Unzip using the local file path
     const unzipResult = await unzip(pickedFile.fileCopyUri, targetPath);
-    console.log('EPUB unzipped to:', unzipResult);
 
-    // List contents recursively
-    const contents = await listDirRecursive(targetPath);
-    console.log(JSON.stringify(contents, null, 2));
-
-
-    return {
-      basePath: targetPath,
-      contents
-    };
-
+    return unzipResult;
   } catch (error) {
     console.error('Error processing EPUB:', error);
     throw error;
   }
 }
 
-const listDirRecursive = async (path) => {
-  const contents = [];
-  const files = await RNFS.readDir(path);
-  for (const file of files) {
-    const filePath = `${path}/${file.name}`;
-    if (file.isFile()) {
-      contents.push(filePath);
-    } else {
-      const subDirContents = await listDirRecursive(filePath);
-      contents.push(...subDirContents);
-    }
-  }
-  return contents;
-};
-
 const App = () => {
+  const [epubPath, setEpubPath] = useState<string | null>(null);
+
   const handleEpubPicker = async () => {
     try {
-      const result = pickAndProcessEpub();
-      console.log(result);
+      const unzippedDir = await pickAndProcessEpub();
+      setEpubPath(unzippedDir);
     } catch (err) {
       console.error(err);
     }
@@ -84,10 +63,13 @@ const App = () => {
         ...styles.container,
       }}
     >
-      <Button
-        title="open epub file"
-        onPress={handleEpubPicker}
-      />
+      { epubPath ? 
+        <EpubReader epubPath={epubPath} /> :
+        <Button
+          title="open epub file"
+          onPress={handleEpubPicker}
+        />
+      }
     </View>
   );
 }
