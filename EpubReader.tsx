@@ -276,8 +276,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   text: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 24,
+    lineHeight: 32, // Increased line height for spacing between lines
     color: '#333',
   },
   paragraph: {
@@ -321,3 +321,4 @@ const styles = StyleSheet.create({
 });
 
 export default EpubReader;
+

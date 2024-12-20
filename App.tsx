@@ -1,15 +1,13 @@
-
 import {
-  View,
-  Button,
+  Button, View, Text
 } from 'react-native';
 import { pick } from 'react-native-document-picker';
-import { styles } from './styles';
 
 import RNFS from 'react-native-fs';
 import { unzip } from 'react-native-zip-archive';
 import { useState } from 'react';
 import EpubReader from './EpubReader';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 async function pickAndProcessEpub() {
   try {
@@ -58,11 +56,12 @@ const App = () => {
   };
 
   return (
-    <View
+    <SafeAreaView
       style={{
         ...styles.container,
       }}
     >
+      <View style={{height: 50, width: '100%'}}><Text>Header</Text></View>
       { epubPath ? 
         <EpubReader epubPath={epubPath} /> :
         <Button
@@ -70,9 +69,30 @@ const App = () => {
           onPress={handleEpubPicker}
         />
       }
-    </View>
+    </SafeAreaView>
   );
 }
 
 export default App;
 
+import { Dimensions, StyleSheet } from 'react-native';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: Dimensions.get("window").height,
+    width: Dimensions.get("window").width,
+  },
+  options: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  currentFormat: {
+    textAlign: 'center',
+  },
+});
