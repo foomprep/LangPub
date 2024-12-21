@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { loadBook } from './epub_parser';
-import Book from './types/Book';
 import HTMLRenderer from './HTMLRenderer';
 
 const EpubReader = ({ epubPath }: { epubPath: string }) => {
   const [content, setContent] = useState<any>(null);
+  const [css, setCss] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     loadBookData();
@@ -34,6 +34,10 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
         );
         return entries;
       }
+      const files: string[] = await readDirRecursive(epubPath);
+      const cssFiles = files.filter(file => file.includes('.css'));
+      const cssContent = await Promise.all(cssFiles.map(async file => await RNFS.readFile(file, 'utf8')));
+      setCss(cssContent.join(''));
 
       const loadedBook = await loadBook(epubPath);
       for (const item of loadedBook.spine) {
@@ -49,7 +53,7 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
 
   return (
     <View style={styles.container}>
-      { content && <HTMLRenderer html={content} containerStyle={{padding:16}} /> }
+      { content && <HTMLRenderer html={content} css={css} containerStyle={{padding:16}} /> }
     </View>
   );
 };

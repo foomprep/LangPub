@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { parseHTML } from './htmlParser'; // Adjust the import path as needed
+import { parseHTML } from './htmlParser';
+import { parseCSS, cssToRNStyle, parseInlineStyle } from './cssParser';
 
 type ParsedElement = {
   type: string;
@@ -9,16 +10,35 @@ type ParsedElement = {
   children: (ParsedElement | string)[];
 };
 
-const RenderElement = ({ element }: { element: ParsedElement | string }) => {
+type StyleSheet = Record<string, object>;
+
+const RenderElement = ({ 
+  element, 
+  styleSheet 
+}: { 
+  element: ParsedElement | string;
+  styleSheet: StyleSheet;
+}) => {
   if (typeof element === 'string') {
     return <Text>{element}</Text>;
   }
 
-  const { type, style, children } = element;
+  const { type, style = {}, attributes, children } = element;
+
+  // Combine styles from different sources
+  const combinedStyle = {
+    ...style,
+    ...(attributes.class ? styleSheet[attributes.class] || {} : {}),
+    ...(attributes.style ? parseInlineStyle(attributes.style) : {})
+  };
 
   const renderChildren = () => {
     return children.map((child, index) => (
-      <RenderElement key={index} element={child} />
+      <RenderElement 
+        key={index} 
+        element={child} 
+        styleSheet={styleSheet} 
+      />
     ));
   };
 
@@ -27,14 +47,14 @@ const RenderElement = ({ element }: { element: ParsedElement | string }) => {
     case 'body':
     case 'div':
       return (
-        <View style={style}>
+        <View style={combinedStyle}>
           {renderChildren()}
         </View>
       );
 
     case 'p':
       return (
-        <Text style={style}>
+        <Text style={combinedStyle}>
           {renderChildren()}
         </Text>
       );
@@ -42,14 +62,14 @@ const RenderElement = ({ element }: { element: ParsedElement | string }) => {
     case 'h2':
     case 'h3':
       return (
-        <Text style={style}>
+        <Text style={combinedStyle}>
           {renderChildren()}
         </Text>
       );
 
     case 'em':
       return (
-        <Text style={style}>
+        <Text style={[combinedStyle, { fontStyle: 'italic' }]}>
           {renderChildren()}
         </Text>
       );
@@ -58,21 +78,37 @@ const RenderElement = ({ element }: { element: ParsedElement | string }) => {
       return <Text>{'\n'}</Text>;
 
     default:
-      return <Text>{renderChildren()}</Text>;
+      return <Text style={combinedStyle}>{renderChildren()}</Text>;
   }
 };
 
 type HTMLRendererProps = {
   html: string;
+  css?: string;
   containerStyle?: object;
 };
 
-const HTMLRenderer = ({ html, containerStyle }: HTMLRendererProps) => {
+const HTMLRenderer = ({ html, css, containerStyle }: HTMLRendererProps) => {
+  if (!html) {
+    return (
+      <View style={[{ padding: 16 }, containerStyle]}>
+        <Text>No content available</Text>
+      </View>
+    );
+  }
+
+  // Parse the CSS if provided
+  const styles = css ? cssToRNStyle(parseCSS(css)) : {};
+  
+  // Parse the HTML content
   const parsedContent = parseHTML(html);
 
   return (
     <ScrollView style={containerStyle}>
-      <RenderElement element={parsedContent} />
+      <RenderElement 
+        element={parsedContent} 
+        styleSheet={styles} 
+      />
     </ScrollView>
   );
 };
