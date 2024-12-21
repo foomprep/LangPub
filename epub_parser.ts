@@ -1,40 +1,9 @@
 import { DOMParser } from 'xmldom';
 import RNFS from 'react-native-fs';
-
-interface BookMetadata {
-  title: string;
-  creator: string;
-  language: string;
-  publisher?: string;
-  description?: string;
-  subjects: string[];
-  identifiers: {
-    type: string;
-    value: string;
-  }[];
-  date?: string;
-}
-
-interface ManifestItem {
-  id: string;
-  href: string;
-  mediaType: string;
-  properties?: string;
-}
-
-interface SpineItem {
-  idref: string;
-  linear: boolean;
-}
-
-export interface Book {
-  metadata: BookMetadata;
-  manifest: ManifestItem[];
-  spine: SpineItem[];
-  contents: {
-    [key: string]: string;  // key is the ID, value is the content
-  };
-}
+import Book from './types/Book';
+import BookMetadata from './types/BookMetadata';
+import ManifestItem from './types/ManifestItem';
+import SpineItem from './types/SpineItem';
 
 // Helper function to get text content of first matching element
 function getElementText(doc: Document, selector: string): string | undefined {
