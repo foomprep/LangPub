@@ -2,15 +2,22 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
-  Dimensions,
+  Text,
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { loadBook } from './epub_parser';
-import HTMLRenderer from './HTMLRenderer';
+import Book from './types/Book';
+import { parseHTML } from './htmlParser';
+import paginateContent from './paginate';
+import { getScreenPixels } from './screen';
+import Page from './types/Page';
+import PaginatedContentView from './PaginatedContentView';
 
 const EpubReader = ({ epubPath }: { epubPath: string }) => {
   const [content, setContent] = useState<any>(null);
   const [css, setCss] = useState<string | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState<Page | undefined>(undefined);
+  const [paginatedSpine, setPaginatedSpine] = useState<Page[][]>([]);
 
   useEffect(() => {
     loadBookData();
@@ -40,12 +47,18 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
       const cssContent = await Promise.all(cssFiles.map(async file => await RNFS.readFile(file, 'utf8')));
       setCss(cssContent.join(''));
 
-      const loadedBook = await loadBook(epubPath);
-      for (const item of loadedBook.spine) {
-        const itemContent = await RNFS.readFile(epubPath + '/OPS/' + item.idref + '.xhtml');
-        setContent(itemContent);
-        break;
-      }
+      const loadedBook: Book = await loadBook(epubPath);
+      Promise.all(
+        loadedBook.spine.map(async (spineItem) => {
+          const itemContent = await RNFS.readFile(epubPath + '/OPS/' + spineItem.idref + '.xhtml');
+          const parsedContent = parseHTML(itemContent);
+          const screen = getScreenPixels();
+          return paginateContent(parsedContent, screen);
+        })
+      ).then(result => {
+        setPaginatedSpine(result);
+        setCurrentPage(result[0][0]);
+      });
 
     } catch (error) {
       console.error('Failed to load book:', error);
@@ -54,7 +67,7 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
 
   return (
     <View style={styles.container}>
-      { content && <HTMLRenderer html={content} css={css} /> }
+      { currentPage && <PaginatedContentView page={currentPage} /> }
     </View>
   );
 };
