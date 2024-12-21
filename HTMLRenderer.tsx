@@ -75,7 +75,31 @@ const RenderElement = ({
       );
 
     case 'br':
-      return <Text>{'\n'}</Text>;
+      return <Text>{''}</Text>;
+
+    case 'ul':
+      return (
+        <View style={combinedStyle}>
+          {renderChildren()}
+        </View>
+      );
+
+    case 'ol':
+      return (
+        <View style={combinedStyle}>
+          {renderChildren()}
+        </View>
+      );
+
+    case 'li':
+      return (
+        <View style={combinedStyle}>
+          <Text>
+            {'\u2022 '}
+            {renderChildren()}
+          </Text>
+        </View>
+      );
 
     default:
       return <Text style={combinedStyle}>{renderChildren()}</Text>;
@@ -114,3 +138,4 @@ const HTMLRenderer = ({ html, css, containerStyle }: HTMLRendererProps) => {
 };
 
 export default HTMLRenderer;
+
