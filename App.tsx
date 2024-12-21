@@ -61,7 +61,6 @@ const App = () => {
         ...styles.container,
       }}
     >
-      <View style={{height: 50, width: '100%'}}><Text>Header</Text></View>
       { epubPath ? 
         <EpubReader epubPath={epubPath} /> :
         <Button
