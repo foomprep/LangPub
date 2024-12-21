@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
+  Dimensions,
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { loadBook } from './epub_parser';
@@ -53,7 +54,7 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
 
   return (
     <View style={styles.container}>
-      { content && <HTMLRenderer html={content} css={css} containerStyle={{padding:16}} /> }
+      { content && <HTMLRenderer html={content} css={css} /> }
     </View>
   );
 };
