@@ -25,7 +25,7 @@ const ReaderComponent = () => {
               const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
               if (result.success) {
                 console.log(result.chapters?.[0]);
-                //setHTMLContent(result.content);
+                setHTMLContent(result.chapters?.[0].content);
               }
             }
           } catch (err) {
@@ -34,6 +34,9 @@ const ReaderComponent = () => {
         }}
       />
       <ScrollView style={styles.bookContainer}>
+        {HTMLContent && 
+          <HtmlToRNConverter html={HTMLContent} />
+        }
       </ScrollView>
     </View>
   );
