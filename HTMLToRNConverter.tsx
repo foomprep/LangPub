@@ -2,6 +2,7 @@ import React, { ReactElement, useState } from 'react';
 import { Text, View, StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { DOMParser } from '@xmldom/xmldom';
 import { translateText } from './translation';
+import WordWrapper from './WordWrapper';
 
 interface ConversionStyles {
   text?: object;
@@ -23,15 +24,14 @@ const getTextFromElement = (element: any): string => {
   // If it's a text element
   if (typeof element === 'string') return element;
   
-  // If it's a React element with children
-  if (element.props && element.props.children) {
+  // If it's a React element
+  if (element.props) {
     if (typeof element.props.children === 'string') {
       return element.props.children;
     }
-    // If there are multiple children, recursively get text from each
     if (Array.isArray(element.props.children)) {
       return element.props.children
-        .map(child => getTextFromElement(child))
+        .map((child: any) => getTextFromElement(child))
         .join('');
     }
     return getTextFromElement(element.props.children);
@@ -137,14 +137,37 @@ const HtmlToRNConverter = ({
 
       case 'p':
         return <Text style={defaultStyles.paragraph}>{children}</Text>;
+        //const paragraphText = Array.from(node.childNodes)
+        //  .map((child: any) => child.nodeValue || '')
+        //  .join('')
+        //  .trim();
+        //
+        //return (
+        //  <WordWrapper
+        //    text={paragraphText}
+        //    textStyle={defaultStyles.paragraph}
+        //    onWordPress={(word) => handleTranslation(word)}
+        //    preserveWhitespace={true}
+        //  />
+        //);
 
       case 'h1':
         return <Text style={defaultStyles.heading1}>{children}</Text>;
 
       case 'h2':
-        return <TouchableOpacity onPress={() => handleTranslation(getTextFromElement(children[0]))}>
-          <Text style={defaultStyles.heading2}>{children}</Text>;
-        </TouchableOpacity>
+        return (
+          <TouchableOpacity onPress={() => {
+            const extractedText = Array.from(node.childNodes)
+              .map((child: any) => child.nodeValue || '')
+              .join('')
+              .trim();
+            handleTranslation(extractedText);
+          }}>
+            <Text style={defaultStyles.heading2}>
+              {children}
+            </Text>
+          </TouchableOpacity>
+        );
 
       case 'h3':
         return <Text style={defaultStyles.heading3}>{children}</Text>;
