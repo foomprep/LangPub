@@ -3,7 +3,7 @@ import { Button, Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
 import { unzipFromContentUri } from './zip';
 import RNFS from 'react-native-fs';
-import { combineEpubContent } from './htmlParser';
+import { processEpubContent } from './epubParser';
 import { useState } from 'react';
 import HtmlToRNConverter from './HTMLToRNConverter';
 
@@ -22,10 +22,10 @@ const ReaderComponent = () => {
             const unzipped = await unzipFromContentUri(result.uri);
             if (unzipped.outputPath) {
               const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
-              const result = await combineEpubContent(contents, unzipped.outputPath + '/OPS');
+              const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
               if (result.success) {
-      console.log(result.content ? result.content.slice(1000) : '');
-                setHTMLContent(result.content);
+                console.log(result.chapters?.[0]);
+                //setHTMLContent(result.content);
               }
             }
           } catch (err) {
@@ -34,11 +34,6 @@ const ReaderComponent = () => {
         }}
       />
       <ScrollView style={styles.bookContainer}>
-        { HTMLContent && 
-          <HtmlToRNConverter
-            html={HTMLContent}
-          />
-        }
       </ScrollView>
     </View>
   );

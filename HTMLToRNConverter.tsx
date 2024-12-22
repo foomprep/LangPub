@@ -29,7 +29,7 @@ const HtmlToRNConverter = ({
   const defaultStyles = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 16,
+      flexDirection: 'column',
     },
     paragraph: {
       marginBottom: 10,
@@ -60,11 +60,10 @@ const HtmlToRNConverter = ({
       marginVertical: 10,
     },
     list: {
-      marginLeft: 20,
       marginVertical: 10,
+      flexDirection: 'column',
     },
     listItem: {
-      flexDirection: 'row',
       marginBottom: 5,
     },
     bold: {
