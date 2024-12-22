@@ -136,20 +136,24 @@ const HtmlToRNConverter = ({
         return <View style={defaultStyles.container}>{children}</View>;
 
       case 'p':
-        return <Text style={defaultStyles.paragraph}>{children}</Text>;
-        //const paragraphText = Array.from(node.childNodes)
-        //  .map((child: any) => child.nodeValue || '')
-        //  .join('')
-        //  .trim();
-        //
-        //return (
-        //  <WordWrapper
-        //    text={paragraphText}
-        //    textStyle={defaultStyles.paragraph}
-        //    onWordPress={(word) => handleTranslation(word)}
-        //    preserveWhitespace={true}
-        //  />
-        //);
+        const paragraphText = Array.from(node.childNodes)
+          .map((child: any) => child.nodeValue || '')
+          .join('')
+          .trim();
+        
+        return (
+          <View 
+            style={defaultStyles.paragraph}
+            pointerEvents="box-none"
+          >
+            <WordWrapper
+              text={paragraphText}
+              textStyle={defaultStyles.text}
+              onWordPress={(word) => handleTranslation(word)}
+              preserveWhitespace={true}
+            />
+          </View>
+        );
 
       case 'h1':
         return <Text style={defaultStyles.heading1}>{children}</Text>;

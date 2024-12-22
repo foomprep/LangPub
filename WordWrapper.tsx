@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, TextStyle, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 interface WordWrapperProps {
   text: string;
@@ -19,7 +20,10 @@ const WordWrapper: React.FC<WordWrapperProps> = ({
     : text.split(/\s+/);
 
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      pointerEvents="box-none"  // Add this
+    >
       {words.map((word, index) => {
         if (!word) return null;
 
@@ -31,8 +35,10 @@ const WordWrapper: React.FC<WordWrapperProps> = ({
           <TouchableOpacity
             key={`word-${index}`}
             onPress={() => onWordPress?.(word, index)}
+            activeOpacity={0.6}
+            delayLongPress={500}  // Add this
           >
-            <Text style={[styles.text, textStyle]}>
+            <Text style={[textStyle]}>
               {word}
             </Text>
           </TouchableOpacity>
@@ -47,24 +53,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'flex-start',
-    gap: 3,
+    gap: 2,
   },
-  text: {
-    fontSize: 16,
-  }
 });
 
 export default WordWrapper;
-
-// Example usage:
-/*
-const ExampleComponent = () => {
-  return (
-    <WordWrapper
-      text="This is a sample text"
-      textStyle={{ fontSize: 18, color: 'blue' }}
-      onWordPress={(word, index) => console.log(`Pressed: ${word}`)}
-    />
-  );
-};
-*/
