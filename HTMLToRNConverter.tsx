@@ -1,6 +1,7 @@
-import React from 'react';
-import { Text, View, StyleSheet, Image } from 'react-native';
+import React, { ReactElement, useState } from 'react';
+import { Text, View, StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { DOMParser } from '@xmldom/xmldom';
+import { translateText } from './translation';
 
 interface ConversionStyles {
   text?: object;
@@ -16,6 +17,29 @@ interface ConversionResult {
   error?: string;
 }
 
+const getTextFromElement = (element: any): string => {
+  if (!element) return '';
+  
+  // If it's a text element
+  if (typeof element === 'string') return element;
+  
+  // If it's a React element with children
+  if (element.props && element.props.children) {
+    if (typeof element.props.children === 'string') {
+      return element.props.children;
+    }
+    // If there are multiple children, recursively get text from each
+    if (Array.isArray(element.props.children)) {
+      return element.props.children
+        .map(child => getTextFromElement(child))
+        .join('');
+    }
+    return getTextFromElement(element.props.children);
+  }
+  
+  return '';
+};
+
 /**
  * Converts HTML string to React Native components
  */
@@ -26,6 +50,9 @@ const HtmlToRNConverter = ({
   html: string;
   customStyles?: ConversionStyles;
 }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalText, setModalText] = useState('');
+
   const defaultStyles = StyleSheet.create({
     container: {
       flex: 1,
@@ -78,6 +105,12 @@ const HtmlToRNConverter = ({
     ...customStyles,
   });
 
+  const handleTranslation = async (text: string) => {
+    const translation = await translateText("French", text);
+    setModalText(translation.translated_text);
+    setModalVisible(true);
+  }
+
   const parseNode = (node: any): React.ReactNode => {
     if (!node) return null;
 
@@ -109,7 +142,9 @@ const HtmlToRNConverter = ({
         return <Text style={defaultStyles.heading1}>{children}</Text>;
 
       case 'h2':
-        return <Text style={defaultStyles.heading2}>{children}</Text>;
+        return <TouchableOpacity onPress={() => handleTranslation(getTextFromElement(children[0]))}>
+          <Text style={defaultStyles.heading2}>{children}</Text>;
+        </TouchableOpacity>
 
       case 'h3':
         return <Text style={defaultStyles.heading3}>{children}</Text>;
@@ -187,7 +222,22 @@ const HtmlToRNConverter = ({
     return <Text>Error converting HTML content</Text>;
   }
 
-  return result.component as React.ReactElement;
+  return (
+    <>
+      {result.component as ReactElement}
+      <Modal
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+        transparent={true}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 20 }}>
+            <Text>{modalText}</Text>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 export default HtmlToRNConverter;
