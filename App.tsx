@@ -1,97 +1,47 @@
-import {
-  Button, View, Text
-} from 'react-native';
-import { pick } from 'react-native-document-picker';
+import { Button, SafeAreaView, useWindowDimensions } from 'react-native';
+import { Reader, ReaderProvider, useReader } from '@epubjs-react-native/core';
+import { useFileSystem } from '@epubjs-react-native/file-system';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import RNFS from 'react-native-fs';
-import { unzip } from 'react-native-zip-archive';
-import { useState } from 'react';
-import EpubReader from './EpubReader';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-async function pickAndProcessEpub() {
-  try {
-    // Pick the file
-    const result = await pick({
-      mode: 'open',
-      copyTo: 'cachesDirectory',
-    });
-
-    const pickedFile = result[0];
-    
-    // The fileCopyUri from copyTo will give us a usable file path
-    if (!pickedFile.fileCopyUri) {
-      throw new Error('Failed to get local file path');
-    }
-
-    // Use the local file path for unzipping
-    const targetPath = `${RNFS.CachesDirectoryPath}/unzipped_epub`;
-    
-    // Ensure target directory is empty
-    if (await RNFS.exists(targetPath)) {
-      await RNFS.unlink(targetPath);
-    }
-    await RNFS.mkdir(targetPath);
-
-    // Unzip using the local file path
-    const unzipResult = await unzip(pickedFile.fileCopyUri, targetPath);
-
-    return unzipResult;
-  } catch (error) {
-    console.error('Error processing EPUB:', error);
-    throw error;
-  }
-}
-
-const App = () => {
-  const [epubPath, setEpubPath] = useState<string | null>(null);
-
-  const handleEpubPicker = async () => {
-    try {
-      const unzippedDir = await pickAndProcessEpub();
-      setEpubPath(unzippedDir);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const ReaderComponent = () => {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { injectJavascript } = useReader();
 
   return (
     <SafeAreaView
       style={{
-        ...styles.container,
+        flex: 1,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
       }}
     >
-      { epubPath ? 
-        <EpubReader epubPath={epubPath} /> :
-        <Button
-          title="open epub file"
-          onPress={handleEpubPicker}
+      <ReaderProvider>
+        <Reader
+          src="https://s3.amazonaws.com/moby-dick/OPS/package.opf"
+          width={width}
+          height={height}
+          fileSystem={useFileSystem}
+          injectedJavascript={`
+            document.addEventListener('click', (e) => {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: "click", message: "document clicked" }));
+            });
+          `}
+          onWebViewMessage={(message) => console.log(message)}
         />
-      }
+      </ReaderProvider>
     </SafeAreaView>
   );
-}
+};
+
+const App = () => {
+  return (
+    <SafeAreaProvider>
+      <ReaderComponent />
+    </SafeAreaProvider>
+  );
+};
 
 export default App;
-
-import { Dimensions, StyleSheet } from 'react-native';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: Dimensions.get("window").height,
-    width: Dimensions.get("window").width,
-  },
-  options: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  currentFormat: {
-    textAlign: 'center',
-  },
-});
