@@ -1,255 +1,136 @@
-type ParsedElement = {
-  type: string;
-  attributes: Record<string, string>;
-  style?: object;
-  children: (ParsedElement | string)[];
-};
+import RNFS from 'react-native-fs';
+import { DOMParser } from '@xmldom/xmldom';
 
-// List of void elements (self-closing tags)
-const VOID_ELEMENTS = new Set([
-  'meta', 'link', 'br', 'hr', 'img', 'input',
-  'area', 'base', 'col', 'embed', 'param', 'source', 'track', 'wbr'
-]);
+interface ProcessResult {
+  success: boolean;
+  content?: string;
+  error?: string;
+}
 
-const stripPreamble = (content: string): string => {
-  // Remove XML declaration
-  let cleaned = content.replace(/<\?xml[^?]*\?>/i, '');
-  // Remove DOCTYPE
-  cleaned = cleaned.replace(/<!DOCTYPE[^>]*>/i, '');
-  return cleaned.trim();
-};
-
-const parseAttributes = (attributeString: string): Record<string, string> => {
-  const attributes: Record<string, string> = {};
-  // Updated regex to handle namespaced attributes and various formats
-  const attributeRegex = /(?:[\w:.-]+)=(?:"[^"]*"|'[^']*')/g;
-  const matches = attributeString.match(attributeRegex) || [];
-  
-  matches.forEach(match => {
-    const [key, ...rest] = match.split('=');
-    const value = rest.join('=').replace(/['"]/g, '');
-    attributes[key.trim()] = value;
-  });
-  
-  return attributes;
-};
-
-const findTagEnd = (content: string, startIndex: number): number => {
-  let index = startIndex;
-  let inQuotes = false;
-  let quoteChar = '';
-  
-  while (index < content.length) {
-    const char = content[index];
-    
-    if ((char === '"' || char === "'") && (!inQuotes || quoteChar === char)) {
-      inQuotes = !inQuotes;
-      quoteChar = char;
-    } else if (char === '>' && !inQuotes) {
-      return index;
-    }
-    
-    index++;
-  }
-  
-  return -1;
-};
-
-const parseTag = (content: string, startIndex: number): [string, Record<string, string>, boolean, number] => {
-  const tagEnd = findTagEnd(content, startIndex);
-  if (tagEnd === -1) throw new Error('Invalid tag format');
-  
-  const tagContent = content.slice(startIndex + 1, tagEnd);
-  const isVoidElement = tagContent.endsWith('/') || tagContent.endsWith(' /');
-  const cleanTagContent = tagContent.replace(/\/$/, '').trim();
-  
-  const spaceIndex = cleanTagContent.search(/\s/);
-  const tagName = spaceIndex === -1 ? cleanTagContent : cleanTagContent.slice(0, spaceIndex);
-  const attributeString = spaceIndex === -1 ? '' : cleanTagContent.slice(spaceIndex + 1);
-  
-  const attributes = parseAttributes(attributeString);
-  
-  return [tagName, attributes, isVoidElement || VOID_ELEMENTS.has(tagName.toLowerCase()), tagEnd + 1];
-};
-
-const parseElement = (content: string, startIndex: number): [ParsedElement, number] => {
-  const [tagName, attributes, isVoid, contentStart] = parseTag(content, startIndex);
-  
-  if (isVoid) {
-    return [{
-      type: tagName,
-      attributes,
-      style: getStyleForClass(attributes.class),
-      children: []
-    }, contentStart];
-  }
-  
-  const closeTag = `</${tagName}>`;
-  let searchStart = contentStart;
-  let nestLevel = 1;
-  let contentEnd = contentStart;
-  
-  while (nestLevel > 0 && searchStart < content.length) {
-    const nextClose = content.indexOf(closeTag, searchStart);
-    const nextOpen = content.indexOf(`<${tagName}`, searchStart);
-    
-    if (nextClose === -1) break;
-    
-    if (nextOpen === -1 || nextClose < nextOpen) {
-      nestLevel--;
-      contentEnd = nextClose;
-      searchStart = nextClose + closeTag.length;
-    } else {
-      nestLevel++;
-      searchStart = nextOpen + tagName.length + 1;
-    }
-  }
-  
-  const innerContent = content.slice(contentStart, contentEnd);
-  const children = parseContent(innerContent);
-  
-  return [{
-    type: tagName,
-    attributes,
-    style: getStyleForClass(attributes.class),
-    children
-  }, contentEnd + closeTag.length];
-};
-
-const parseContent = (content: string): (ParsedElement | string)[] => {
-  const result: (ParsedElement | string)[] = [];
-  let currentIndex = 0;
-  
-  while (currentIndex < content.length) {
-    const nextTag = content.indexOf('<', currentIndex);
-    
-    if (nextTag === -1) {
-      const text = content.slice(currentIndex).trim();
-      if (text) result.push(text);
-      break;
-    }
-    
-    // Handle text before tag
-    if (nextTag > currentIndex) {
-      const text = content.slice(currentIndex, nextTag).trim();
-      if (text) result.push(text);
-    }
-    
-    // Check if it's a closing tag
-    if (content[nextTag + 1] === '/') {
-      const closeEnd = content.indexOf('>', nextTag);
-      currentIndex = closeEnd + 1;
-      continue;
-    }
-    
-    try {
-      const [element, newIndex] = parseElement(content, nextTag);
-      result.push(element);
-      currentIndex = newIndex;
-    } catch (error) {
-      console.warn('Error parsing element:', error);
-      currentIndex = nextTag + 1;
-    }
-  }
-  
-  return result;
-};
-
-const getStyleForClass = (className?: string): object => {
-  if (!className) return {};
-
-  const styleMap: Record<string, object> = {
-    'titre-chapitre': {
-      marginVertical: 20,
-      paddingHorizontal: 16
-    },
-    'titre-chapitre-page-padding': {
-      marginTop: 20,
-      marginBottom: 20
-    },
-    'titre-avec-bordure': {
-      borderBottomWidth: 1,
-      borderBottomColor: '#000',
-      paddingBottom: 8,
-      marginBottom: 16
-    },
-    'sous-titre': {
-      marginBottom: 24,
-      color: '#666'
-    },
-    'br': {
-      marginVertical: 16
-    }
-  };
-
-  return styleMap[className] || {};
-};
-
-const processElementType = (element: ParsedElement): ParsedElement => {
-  const { type, style = {} } = element;
-  
-  switch (type.toLowerCase()) {
-    case 'h2':
-      return {
-        ...element,
-        style: {
-          ...style,
-          fontSize: 24,
-          fontWeight: 'bold'
-        }
-      };
-    case 'h3':
-      return {
-        ...element,
-        style: {
-          ...style,
-          fontSize: 20,
-          fontWeight: 'bold'
-        }
-      };
-    case 'em':
-      return {
-        ...element,
-        style: {
-          ...style,
-          fontStyle: 'italic'
-        }
-      };
-    case 'br':
-      return {
-        ...element,
-        children: ['\n']
-      };
-    default:
-      return element;
-  }
-};
-
-export const parseHTML = (htmlString: string): ParsedElement => {
+/**
+ * Processes EPUB content and creates a single HTML file with concatenated body contents
+ * @param htmlContent - The HTML string containing the EPUB table of contents
+ * @param epubPath - The base path where the EPUB files are located
+ * @returns Promise resolving to ProcessResult containing the combined HTML content
+ */
+export const combineEpubContent = async (
+  htmlContent: string,
+  epubPath: string
+): Promise<ProcessResult> => {
   try {
-    const cleanedHtml = stripPreamble(htmlString);
-    const children = parseContent(cleanedHtml);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+
+    // Get all chapter links
+    const tocNav = doc.getElementsByTagName('nav')[0];
+    const chapterLinks = tocNav.getElementsByTagName('a');
     
-    // If the first child is already an HTML element, return it
-    if (children.length === 1 && 
-        typeof children[0] !== 'string' && 
-        children[0].type.toLowerCase() === 'html') {
-      return processElementType(children[0]);
+    if (!chapterLinks.length) {
+      throw new Error('No chapters found in the table of contents');
     }
-    
-    // Otherwise, wrap the content in an HTML element
-    return processElementType({
-      type: 'html',
-      attributes: {},
-      children
-    });
-  } catch (error) {
-    console.error('Error parsing HTML:', error);
+
+    // Start building the combined HTML
+    const combinedContent = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <meta charset="utf-8"/>
+    <title>Combined Content</title>
+    <link type="text/css" rel="stylesheet" href="css/stylesheet.css"/>
+    <style>
+        .chapter-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 2em 0 1em;
+            text-align: center;
+        }
+        .chapter-content {
+            margin-bottom: 2em;
+            padding-bottom: 1em;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>`;
+
+    let chapters = '';
+
+    // Process each chapter
+    for (let i = 0; i < chapterLinks.length; i++) {
+      const link = chapterLinks[i];
+      const href = link.getAttribute('href');
+      const title = link.textContent || `Chapter ${i + 1}`;
+
+      if (!href) {
+        console.warn(`Skipping chapter "${title}" - no href found`);
+        continue;
+      }
+
+      const chapterPath = `${epubPath}/${href}`;
+      
+      try {
+        // Read the chapter file
+        const chapterContent = await RNFS.readFile(chapterPath, 'utf8');
+        
+        // Parse the chapter content
+        const chapterDoc = parser.parseFromString(chapterContent, 'text/html');
+        
+        // Extract body content
+        const body = chapterDoc.getElementsByTagName('body')[0];
+        if (body) {
+          // Get the innerHTML of the body
+          const bodyContent = body.toString()
+            // Remove the body tags themselves
+            .replace(/<\/?body[^>]*>/g, '')
+            // Clean up any empty lines
+            .trim();
+
+          chapters += `
+    <div class="chapter">
+        <h2 class="chapter-title" id="${href.replace('.xhtml', '')}">${title}</h2>
+        <div class="chapter-content">
+            ${bodyContent}
+        </div>
+    </div>`;
+        }
+        
+      } catch (chapterError) {
+        console.warn(`Error processing chapter "${title}": ${chapterError}`);
+      }
+    }
+
+    // Complete the HTML structure
+    const finalHtml = combinedContent + chapters + '\n</body>\n</html>';
+
+    if (!chapters) {
+      throw new Error('No chapters were successfully processed');
+    }
+
     return {
-      type: 'text',
-      attributes: {},
-      children: ['Error parsing content']
+      success: true,
+      content: finalHtml
+    };
+
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
 };
 
+// Usage example:
+/*
+const handleEpubCombine = async (toc: string, epubPath: string) => {
+  const result = await combineEpubContent(toc, epubPath);
+  
+  if (result.success && result.content) {
+    // Save the combined HTML to a file
+    const outputPath = `${epubPath}/combined.html`;
+    await RNFS.writeFile(outputPath, result.content, 'utf8');
+    console.log('Combined HTML saved to:', outputPath);
+  } else {
+    console.error('Failed to combine EPUB content:', result.error);
+  }
+};
+*/
