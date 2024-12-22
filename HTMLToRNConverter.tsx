@@ -125,6 +125,9 @@ const HtmlToRNConverter = ({
       case 'u':
         return <Text style={defaultStyles.underline}>{children}</Text>;
 
+      case 'br':
+        return <Text>{'\n'}</Text>;
+
       case 'img':
         return (
           <Image
@@ -189,39 +192,3 @@ const HtmlToRNConverter = ({
 
 export default HtmlToRNConverter;
 
-// Usage example:
-/*
-const MyComponent = () => {
-  const htmlContent = `
-    <div>
-      <h1>Title</h1>
-      <p>This is a <strong>bold</strong> paragraph with <em>italic</em> text.</p>
-      <img src="path/to/image.jpg" alt="Sample image" />
-      <ul>
-        <li>List item 1</li>
-        <li>List item 2</li>
-      </ul>
-    </div>
-  `;
-
-  const customStyles = {
-    text: {
-      color: '#333',
-      fontSize: 18,
-    },
-    heading1: {
-      color: '#000',
-      fontSize: 28,
-    },
-  };
-
-  return (
-    <ScrollView>
-      <HtmlToRNConverter 
-        html={htmlContent} 
-        customStyles={customStyles} 
-      />
-    </ScrollView>
-  );
-};
-*/

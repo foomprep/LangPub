@@ -1,11 +1,6 @@
 import RNFS from 'react-native-fs';
 import { DOMParser } from '@xmldom/xmldom';
-
-interface Chapter {
-  title: string;
-  content: string;
-  href: string;
-}
+import Chapter from './types/Chapter';
 
 interface ProcessResult {
   success: boolean;

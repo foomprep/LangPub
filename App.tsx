@@ -6,9 +6,12 @@ import RNFS from 'react-native-fs';
 import { processEpubContent } from './epubParser';
 import { useState } from 'react';
 import HtmlToRNConverter from './HTMLToRNConverter';
+import Chapter from './types/Chapter';
 
 const ReaderComponent = () => {
   const [HTMLContent, setHTMLContent] = useState<string | undefined>(undefined);
+  const [chapters, setChapters] = useState<Chapter[] | undefined>(undefined);
+  const [chapterIndex, setChapterIndex] = useState<number>(0);
 
   return (
     <View>
@@ -24,8 +27,8 @@ const ReaderComponent = () => {
               const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
               const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
               if (result.success) {
-                console.log(result.chapters?.[0]);
-                setHTMLContent(result.chapters?.[0].content);
+                setChapters(result.chapters);
+                setChapterIndex(0);
               }
             }
           } catch (err) {
@@ -34,8 +37,8 @@ const ReaderComponent = () => {
         }}
       />
       <ScrollView style={styles.bookContainer}>
-        {HTMLContent && 
-          <HtmlToRNConverter html={HTMLContent} />
+        {chapters && 
+          <HtmlToRNConverter html={chapters[chapterIndex].content} />
         }
       </ScrollView>
     </View>
