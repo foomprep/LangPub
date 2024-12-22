@@ -230,17 +230,16 @@ export const parseHTML = (htmlString: string): ParsedElement => {
     const cleanedHtml = stripPreamble(htmlString);
     const children = parseContent(cleanedHtml);
     
-    // Find the body content
-    const body = children.find(child => 
-      typeof child !== 'string' && child.type.toLowerCase() === 'body'
-    );
-    
-    if (body && typeof body !== 'string') {
-      return processElementType(body);
+    // If the first child is already an HTML element, return it
+    if (children.length === 1 && 
+        typeof children[0] !== 'string' && 
+        children[0].type.toLowerCase() === 'html') {
+      return processElementType(children[0]);
     }
     
+    // Otherwise, wrap the content in an HTML element
     return processElementType({
-      type: 'div',
+      type: 'html',
       attributes: {},
       children
     });
@@ -253,3 +252,4 @@ export const parseHTML = (htmlString: string): ParsedElement => {
     };
   }
 };
+

@@ -3,6 +3,8 @@ import {
   View,
   StyleSheet,
   Text,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { loadBook } from './epub_parser';
@@ -16,12 +18,40 @@ import PaginatedContentView from './PaginatedContentView';
 const EpubReader = ({ epubPath }: { epubPath: string }) => {
   const [content, setContent] = useState<any>(null);
   const [css, setCss] = useState<string | undefined>(undefined);
-  const [currentPage, setCurrentPage] = useState<Page | undefined>(undefined);
+  const [chapterIndex, setChapterIndex] = useState<number>(0);
+  const [pageIndex, setPageIndex] = useState<number>(0);
   const [paginatedSpine, setPaginatedSpine] = useState<Page[][]>([]);
 
   useEffect(() => {
     loadBookData();
+
   }, [epubPath]);
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gestureState) => {
+      if (gestureState.dx > Dimensions.get('window').width / 2) {
+        handleSwipeRight();
+      } else if (gestureState.dx < -Dimensions.get('window').width / 2) {
+        handleSwipeLeft();
+      }
+    },
+  });
+
+  const handleSwipeLeft = () => {
+    console.log('pageIndex', pageIndex);
+    console.log('chapterIndex', chapterIndex);
+    console.log('chapterLength', paginatedSpine[chapterIndex].length);
+    if ((pageIndex+1) >= paginatedSpine[chapterIndex].length) {
+      setChapterIndex(prev => prev + 1);
+      setPageIndex(0);
+    } else {
+      setPageIndex(prev => prev + 1);
+    }
+  };
+
+  const handleSwipeRight = () => {
+  };
 
   const loadBookData = async () => {
     try {
@@ -48,17 +78,22 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
       setCss(cssContent.join(''));
 
       const loadedBook: Book = await loadBook(epubPath);
-      Promise.all(
-        loadedBook.spine.map(async (spineItem) => {
-          const itemContent = await RNFS.readFile(epubPath + '/OPS/' + spineItem.idref + '.xhtml');
-          const parsedContent = parseHTML(itemContent);
-          const screen = getScreenPixels();
-          return paginateContent(parsedContent, screen);
-        })
-      ).then(result => {
-        setPaginatedSpine(result);
-        setCurrentPage(result[0][0]);
-      });
+      const itemContent = await RNFS.readFile(epubPath + '/OPS/' + loadedBook.spine[0].idref + '.xhtml');
+      const parsedContent = parseHTML(itemContent);
+      const screen = getScreenPixels();
+      const pages: Page[] = paginateContent(parsedContent, screen);
+      //Promise.all(
+      //  loadedBook.spine.map(async (spineItem) => {
+      //    const itemContent = await RNFS.readFile(epubPath + '/OPS/' + spineItem.idref + '.xhtml');
+      //    const parsedContent = parseHTML(itemContent);
+      //    const screen = getScreenPixels();
+      //    return paginateContent(parsedContent, screen);
+      //  })
+      //).then(result => {
+      //  setPaginatedSpine(result);
+      //  setChapterIndex(0);
+      //  setPageIndex(0);
+      //});
 
     } catch (error) {
       console.error('Failed to load book:', error);
@@ -66,8 +101,8 @@ const EpubReader = ({ epubPath }: { epubPath: string }) => {
   };
 
   return (
-    <View style={styles.container}>
-      { currentPage && <PaginatedContentView page={currentPage} /> }
+    <View style={styles.container} {...panResponder.panHandlers}>
+      { paginatedSpine.length > 0 && <PaginatedContentView page={paginatedSpine[chapterIndex][pageIndex]} /> }
     </View>
   );
 };
