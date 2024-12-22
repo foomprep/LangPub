@@ -7,13 +7,22 @@ import { processEpubContent } from './epubParser';
 import { useState } from 'react';
 import HtmlToRNConverter from './HTMLToRNConverter';
 import Chapter from './types/Chapter';
+import { GestureHandlerRootView, PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 
 const ReaderComponent = () => {
-  const [HTMLContent, setHTMLContent] = useState<string | undefined>(undefined);
   const [chapters, setChapters] = useState<Chapter[] | undefined>(undefined);
   const [chapterIndex, setChapterIndex] = useState<number>(0);
 
+  const handleGesture = (event: PanGestureHandlerGestureEvent) => {
+    if (event.nativeEvent.translationX > 200 && chapterIndex > 0) {
+      setChapterIndex(chapterIndex - 1);
+    } else if (event.nativeEvent.translationX < -200 && chapterIndex < (chapters?.length ?? 0) - 1) {
+      setChapterIndex(chapterIndex + 1);
+    }
+  };
+
   return (
+    <GestureHandlerRootView>
     <View>
       <Button
         title="open file"
@@ -36,12 +45,15 @@ const ReaderComponent = () => {
           }
         }}
       />
-      <ScrollView style={styles.bookContainer}>
-        {chapters && 
-          <HtmlToRNConverter html={chapters[chapterIndex].content} />
-        }
-      </ScrollView>
+      <PanGestureHandler onGestureEvent={handleGesture}>
+        <ScrollView style={styles.bookContainer}>
+          {chapters && 
+            <HtmlToRNConverter html={chapters[chapterIndex].content} />
+          }
+        </ScrollView>
+      </PanGestureHandler>
     </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -61,3 +73,4 @@ const ReaderComponent = () => {
       height: Dimensions.get("window").height,
     }
   })
+
