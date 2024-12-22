@@ -13,46 +13,69 @@ const ReaderComponent = () => {
   const [chapters, setChapters] = useState<Chapter[] | undefined>(undefined);
   const [chapterIndex, setChapterIndex] = useState<number>(0);
 
+  const [lastX, setLastX] = useState<number | null>(null);
+  const [hasChangedChapter, setHasChangedChapter] = useState(false);
+
   const handleGesture = (event: PanGestureHandlerGestureEvent) => {
-    if (event.nativeEvent.translationX > 200 && chapterIndex > 0) {
-      setChapterIndex(chapterIndex - 1);
-    } else if (event.nativeEvent.translationX < -200 && chapterIndex < (chapters?.length ?? 0) - 1) {
-      setChapterIndex(chapterIndex + 1);
+    const VELOCITY_THRESHOLD = 500;
+    const TRANSLATION_THRESHOLD = 200;
+
+    // If lastX is null or the current X is significantly different, 
+    // we're likely starting a new gesture
+    if (lastX === null || Math.abs(event.nativeEvent.absoluteX - lastX) > 100) {
+      setHasChangedChapter(false);
+      setLastX(event.nativeEvent.absoluteX);
+    }
+    
+    if (!hasChangedChapter) {
+      const meetsThreshold = 
+        Math.abs(event.nativeEvent.velocityX) > VELOCITY_THRESHOLD ||
+        Math.abs(event.nativeEvent.translationX) > TRANSLATION_THRESHOLD;
+        
+      if (meetsThreshold) {
+        if (event.nativeEvent.translationX > 0 && chapterIndex > 0) {
+          setChapterIndex(chapterIndex - 1);
+          setHasChangedChapter(true);
+        } else if (event.nativeEvent.translationX < 0 && chapterIndex < (chapters?.length ?? 0) - 1) {
+          setChapterIndex(chapterIndex + 1);
+          setHasChangedChapter(true);
+        }
+      }
     }
   };
 
   return (
     <GestureHandlerRootView>
-    <View>
-      <Button
-        title="open file"
-        onPress={async () => {
-          try {
-            const [result] = await pick({
-              mode: 'open',
-            })
-            const unzipped = await unzipFromContentUri(result.uri);
-            if (unzipped.outputPath) {
-              const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
-              const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
-              if (result.success) {
-                setChapters(result.chapters);
-                setChapterIndex(0);
+      <View>
+        <Button
+          title="open file"
+          onPress={async () => {
+            try {
+              const [result] = await pick({
+                mode: 'open',
+              })
+              const unzipped = await unzipFromContentUri(result.uri);
+              if (unzipped.outputPath) {
+                const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
+                const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
+                if (result.success) {
+                  setChapters(result.chapters);
+                  setChapterIndex(0);
+                }
               }
+            } catch (err) {
+              // see error handling
             }
-          } catch (err) {
-            // see error handling
-          }
-        }}
-      />
-      <PanGestureHandler onGestureEvent={handleGesture}>
-        <ScrollView style={styles.bookContainer}>
-          {chapters && 
-            <HtmlToRNConverter html={chapters[chapterIndex].content} />
-          }
-        </ScrollView>
-      </PanGestureHandler>
-    </View>
+          }}
+        />
+        <PanGestureHandler onGestureEvent={handleGesture}>
+          <ScrollView style={styles.bookContainer}>
+            {chapters && 
+              <HtmlToRNConverter html={chapters[chapterIndex].content} />
+            }
+          </ScrollView>
+        </PanGestureHandler>
+      </View>
     </GestureHandlerRootView>
   );
 };
