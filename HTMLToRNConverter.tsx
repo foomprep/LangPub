@@ -229,12 +229,17 @@ const HtmlToRNConverter = ({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
         transparent={true}
+        animationType="fade"
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
           <View style={{ backgroundColor: 'white', padding: 20 }}>
             <Text>{modalText}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </>
   );
