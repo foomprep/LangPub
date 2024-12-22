@@ -1,3 +1,4 @@
+
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Button, Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
@@ -17,19 +18,20 @@ const ReaderComponent = () => {
   const [hasChangedChapter, setHasChangedChapter] = useState(false);
 
   const handleGesture = (event: PanGestureHandlerGestureEvent) => {
-    const VELOCITY_THRESHOLD = 500;
-    const TRANSLATION_THRESHOLD = 200;
+    const VELOCITY_THRESHOLD = 500; // Decreased from 800
+    const TRANSLATION_THRESHOLD = 150; // Decreased from 250
+    const NEW_GESTURE_THRESHOLD = 75; // Decreased from 150
 
-    // If lastX is null or the current X is significantly different, 
-    // we're likely starting a new gesture
-    if (lastX === null || Math.abs(event.nativeEvent.absoluteX - lastX) > 100) {
+    // Only consider it a new gesture if there's a larger position difference
+    if (lastX === null || Math.abs(event.nativeEvent.absoluteX - lastX) > NEW_GESTURE_THRESHOLD) {
       setHasChangedChapter(false);
       setLastX(event.nativeEvent.absoluteX);
     }
     
     if (!hasChangedChapter) {
+      // Require both velocity AND translation thresholds for faster swipes
       const meetsThreshold = 
-        Math.abs(event.nativeEvent.velocityX) > VELOCITY_THRESHOLD ||
+        Math.abs(event.nativeEvent.velocityX) > VELOCITY_THRESHOLD && 
         Math.abs(event.nativeEvent.translationX) > TRANSLATION_THRESHOLD;
         
       if (meetsThreshold) {
