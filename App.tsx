@@ -54,17 +54,28 @@ const ReaderComponent = () => {
   const handleSelectBook = async (_e: any) => {
     try {
       const [result] = await pick({
-      mode: 'open',
+        mode: 'open',
       })
       const unzipped = await unzipFromContentUri(result.uri);
-      if (unzipped.outputPath) {
+      if (unzipped.outputPath && await RNFS.exists(unzipped.outputPath + '/content.opf')) {
+        const contents = await RNFS.readFile(unzipped.outputPath + '/content.opf');
+        const result = await processEpubContent(contents, unzipped.outputPath);
+        console.log(result);
+        if (result.success) {
+          setChapters(result.chapters);
+          setChapterIndex(0);
+        }
+      } else if (await RNFS.exists(unzipped.outputPath + '/OPS/content.opf')) {
         const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/content.opf');
         const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
         if (result.success) {
           setChapters(result.chapters);
           setChapterIndex(0);
         }
+      } else {
+        console.error('content.opf not found in ', unzipped.outputPath, ' or ', unzipped.outputPath + '/OPS');
       }
+
     } catch (err) {
       console.error('Error opening file:', err);
     }
