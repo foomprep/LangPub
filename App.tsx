@@ -50,30 +50,28 @@ const ReaderComponent = () => {
     }
   };
 
+  const handleSelectBook = async (_e: any) => {
+    try {
+      const [result] = await pick({
+      mode: 'open',
+      })
+      const unzipped = await unzipFromContentUri(result.uri);
+      if (unzipped.outputPath) {
+        const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
+        const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
+        if (result.success) {
+          setChapters(result.chapters);
+          setChapterIndex(0);
+        }
+      }
+    } catch (err) {
+      console.error('Error opening file:', err);
+    }
+  }
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
-        <Button
-          title="open file"
-          onPress={async () => {
-            try {
-              const [result] = await pick({
-                mode: 'open',
-              })
-              const unzipped = await unzipFromContentUri(result.uri);
-              if (unzipped.outputPath) {
-                const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
-                const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
-                if (result.success) {
-                  setChapters(result.chapters);
-                  setChapterIndex(0);
-                }
-              }
-            } catch (err) {
-              console.error('Error opening file:', err);
-            }
-          }}
-        />
         <PanGestureHandler 
           onGestureEvent={handleGesture}
           activeOffsetX={[-20, 20]}
