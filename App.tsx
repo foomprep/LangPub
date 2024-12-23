@@ -15,6 +15,7 @@ import Icon from '@react-native-vector-icons/material-design-icons';
 import TableOfContents from './TableOfContents';
 import { Language } from './transcription';
 import ProcessResult from './types/ProcessResult';
+import { findContentOpf, getDirname } from './utils';
 
 const langMap = {
   'de': Language.GERMAN,
@@ -66,24 +67,20 @@ const ReaderComponent = () => {
         mode: 'open',
       });
       const unzipped = await unzipFromContentUri(result.uri);
-      if (unzipped.outputPath && await RNFS.exists(unzipped.outputPath + '/content.opf')) {
-        const contents = await RNFS.readFile(unzipped.outputPath + '/content.opf');
-        const processResult: ProcessResult = await processEpubContent(contents, unzipped.outputPath);
-        if (processResult.success) {
-          setProcessResult(processResult);
-          setChapterIndex(0);
+      if (unzipped.outputPath) {
+        const contentOpfPath = await findContentOpf(unzipped.outputPath);
+        if (contentOpfPath) {
+          const contents = await RNFS.readFile(contentOpfPath);
+          const processResult: ProcessResult = await processEpubContent(contents, getDirname(contentOpfPath));
+          console.log(processResult.metadata?.language);
+          if (processResult.success) {
+            setProcessResult(processResult);
+            setChapterIndex(0);
+          }
+        } else {
+          console.error('content.opf not found in ', unzipped.outputPath);
         }
-      } else if (await RNFS.exists(unzipped.outputPath + '/OPS/content.opf')) {
-        const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/content.opf');
-        const processResult = await processEpubContent(contents, unzipped.outputPath + '/OPS');
-        if (processResult.success) {
-          setProcessResult(processResult);
-          setChapterIndex(0);
-        }
-      } else {
-        console.error('content.opf not found in ', unzipped.outputPath, ' or ', unzipped.outputPath + '/OPS');
       }
-
     } catch (err) {
       console.error('Error opening file:', err);
     }
