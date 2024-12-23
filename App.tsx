@@ -93,24 +93,15 @@ const ReaderComponent = () => {
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerButtons}>
+          { processResult?.chapters &&
             <Pressable onPress={() => setTocVisible(true)} style={styles.iconContainer}>
               <Icon name="format-list-bulleted" size={30} color="#000" />
             </Pressable>
-            <Pressable onPress={handleSelectBook} style={styles.iconContainer}>
-              <Icon name="book-open-variant" size={30} color="#000" />
-            </Pressable>
-          </View>
-          
-          {processResult?.chapters && (
-            <TableOfContents
-              visible={tocVisible}
-              onClose={() => setTocVisible(false)}
-              chapters={processResult.chapters}
-              onChapterPress={setChapterIndex}
-              currentChapter={chapterIndex}
-            />
-          )}
+          }
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={handleSelectBook} style={styles.iconContainer}>
+            <Icon name="book-open-variant" size={30} color="#000" />
+          </Pressable>
         </View>
         <PanGestureHandler 
           onGestureEvent={handleGesture}
@@ -128,6 +119,15 @@ const ReaderComponent = () => {
             }
           </View>
         </PanGestureHandler>
+        {processResult?.chapters && (
+          <TableOfContents
+            visible={tocVisible}
+            onClose={() => setTocVisible(false)}
+            chapters={processResult.chapters}
+            onChapterPress={setChapterIndex}
+            currentChapter={chapterIndex}
+          />
+        )}
       </View>
     </GestureHandlerRootView>
   );
@@ -152,12 +152,8 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     backgroundColor: '#f5f5f5',
-    paddingRight: 10,
-  },
-  headerButtons: {
-    flexDirection: 'row',
+    paddingHorizontal: 10,
     alignItems: 'center',
   },
   iconContainer: {
@@ -166,3 +162,4 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
