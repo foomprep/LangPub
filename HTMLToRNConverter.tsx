@@ -96,11 +96,13 @@ const HtmlToRNConverter = ({
 
   const handleTranslation = async (text: string) => {
     const translation = await translateText("French", text);
-    setOriginalText(text);
+    const processedText = text.split(' ').length === 1 ? text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '') : text;
+    setOriginalText(processedText);
     setTranslatedText(translation.translated_text);
     setModalVisible(true);
-    setAudioData(await getReactNativeSound(Language.FRENCH, text));
+    setAudioData(await getReactNativeSound(Language.FRENCH, processedText));
   };
+
 
   const renderElement = ({ item }: { item: HTMLElement }) => {
     switch (item.type) {
@@ -309,13 +311,23 @@ const HtmlToRNConverter = ({
             }
           }}
         >
-          <View style={{ flexDirection: 'row', gap: 10, backgroundColor: 'white', padding: 20 }}>
+          <View 
+            style={{ 
+              flexDirection: 'row', 
+              gap: 20, 
+              backgroundColor: 'white', 
+              padding: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
             <View>
-              <Text>{originalText}</Text>
-              <Text style={defaultStyles.bold}>{translatedText}</Text>
+              <Text style={{fontSize: 30}}>{originalText}</Text>
+              <Text style={{fontSize: 30, ...defaultStyles.bold}}>{translatedText}</Text>
             </View>
             <Icon
               name="volume-high"
+              size={30}
               onPress={() => {
                 if (audioData) {
                   audioData.sound.play();
