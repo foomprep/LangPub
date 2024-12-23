@@ -1,8 +1,14 @@
-import React, { ReactElement, useState } from 'react';
+import React, { useState } from 'react';
 import { Text, View, StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { DOMParser } from '@xmldom/xmldom';
 import { translateText } from './translation';
 import { FlashList } from '@shopify/flash-list';
+import { Language, getReactNativeSound } from './transcription';
+import Sound from 'react-native-sound';
+import RNFS from 'react-native-fs';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+
+Sound.setCategory('Playback');
 
 interface ConversionStyles {
   text?: object;
@@ -19,6 +25,11 @@ interface HTMLElement {
   onPress?: (word?: string) => void;
 }
 
+interface AudioData {
+  sound: any,
+  tempFilePath: string,
+}
+
 const HtmlToRNConverter = ({
   html,
   customStyles = {},
@@ -27,7 +38,9 @@ const HtmlToRNConverter = ({
   customStyles?: ConversionStyles;
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalText, setModalText] = useState('');
+  const [originalText, setOriginalText] = useState<string>('');
+  const [translatedText, setTranslatedText] = useState<string>('');
+  const [audioData, setAudioData] = useState<AudioData | undefined>(undefined);
 
   const defaultStyles = StyleSheet.create({
     container: {
@@ -83,8 +96,10 @@ const HtmlToRNConverter = ({
 
   const handleTranslation = async (text: string) => {
     const translation = await translateText("French", text);
-    setModalText(translation.translated_text);
+    setOriginalText(text);
+    setTranslatedText(translation.translated_text);
     setModalVisible(true);
+    setAudioData(await getReactNativeSound(Language.FRENCH, text));
   };
 
   const renderElement = ({ item }: { item: HTMLElement }) => {
@@ -286,10 +301,28 @@ const HtmlToRNConverter = ({
         <TouchableOpacity
           style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}
           activeOpacity={1}
-          onPress={() => setModalVisible(false)}
+          onPress={() => {
+            setModalVisible(false);
+            if (audioData) {
+              audioData.sound.release();
+              RNFS.unlink(audioData.tempFilePath);
+            }
+          }}
         >
-          <View style={{ backgroundColor: 'white', padding: 20 }}>
-            <Text>{modalText}</Text>
+          <View style={{ flexDirection: 'row', gap: 10, backgroundColor: 'white', padding: 20 }}>
+            <View>
+              <Text>{originalText}</Text>
+              <Text style={defaultStyles.bold}>{translatedText}</Text>
+            </View>
+            <MaterialDesignIcons
+              name="volume-high"
+              size={30}
+              onPress={() => {
+                if (audioData) {
+                  audioData.sound.play();
+                }
+              }}
+            />
           </View>
         </TouchableOpacity>
       </Modal>

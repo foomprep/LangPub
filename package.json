@@ -10,14 +10,18 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-vector-icons/common": "^11.0.0",
+    "@react-native-vector-icons/material-design-icons": "^7.4.47",
     "@shopify/flash-list": "^1.7.2",
     "@xmldom/xmldom": "^0.9.6",
     "react": "18.3.1",
     "react-native": "0.76.5",
+    "react-native-blob-util": "^0.21.2",
     "react-native-document-picker": "^9.3.1",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.21.2",
     "react-native-safe-area-context": "^5.0.0",
+    "react-native-sound": "^0.11.2",
     "react-native-webview": "^13.12.5",
     "react-native-zip-archive": "^7.0.1"
   },
