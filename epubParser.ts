@@ -1,20 +1,7 @@
 import RNFS from 'react-native-fs';
 import { DOMParser } from '@xmldom/xmldom';
 import Chapter from './types/Chapter';
-
-export interface ProcessResult {
-  success: boolean;
-  content?: string;
-  chapters?: Chapter[];
-  error?: string;
-  metadata?: {
-    title: string;
-    creator: string;
-    publisher: string;
-    language: string;
-    description?: string;
-  };
-}
+import ProcessResult from './types/ProcessResult';
 
 interface ManifestItem {
   id: string;

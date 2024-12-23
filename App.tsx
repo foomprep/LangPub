@@ -3,7 +3,7 @@ import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
 import { unzipFromContentUri } from './zip';
 import RNFS from 'react-native-fs';
-import { ProcessResult, processEpubContent } from './epubParser';
+import { processEpubContent } from './epubParser';
 import { useState } from 'react';
 import HtmlToRNConverter from './HTMLToRNConverter';
 import { 
@@ -12,7 +12,9 @@ import {
   PanGestureHandlerGestureEvent 
 } from 'react-native-gesture-handler';
 import Icon from '@react-native-vector-icons/material-design-icons';
+import TableOfContents from './TableOfContents';
 import { Language } from './transcription';
+import ProcessResult from './types/ProcessResult';
 
 const langMap = {
   'de': Language.GERMAN,
@@ -25,6 +27,7 @@ const ReaderComponent = () => {
   const [chapterIndex, setChapterIndex] = useState<number>(0);
   const [lastX, setLastX] = useState<number | null>(null);
   const [hasChangedChapter, setHasChangedChapter] = useState(false);
+  const [tocVisible, setTocVisible] = useState(false);
 
   const handleGesture = (event: PanGestureHandlerGestureEvent) => {
     if (Math.abs(event.nativeEvent.velocityY) > Math.abs(event.nativeEvent.velocityX)) {
@@ -90,9 +93,24 @@ const ReaderComponent = () => {
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={handleSelectBook} style={styles.openIconContainer}>
-            <Icon name="book-open-variant" size={30} color="#000" />
-          </Pressable>
+          <View style={styles.headerButtons}>
+            <Pressable onPress={() => setTocVisible(true)} style={styles.iconContainer}>
+              <Icon name="format-list-bulleted" size={30} color="#000" />
+            </Pressable>
+            <Pressable onPress={handleSelectBook} style={styles.iconContainer}>
+              <Icon name="book-open-variant" size={30} color="#000" />
+            </Pressable>
+          </View>
+          
+          {processResult?.chapters && (
+            <TableOfContents
+              visible={tocVisible}
+              onClose={() => setTocVisible(false)}
+              chapters={processResult.chapters}
+              onChapterPress={setChapterIndex}
+              currentChapter={chapterIndex}
+            />
+          )}
         </View>
         <PanGestureHandler 
           onGestureEvent={handleGesture}
@@ -108,7 +126,6 @@ const ReaderComponent = () => {
                     language={langMap[processResult.metadata.language]}
                 />
             }
-
           </View>
         </PanGestureHandler>
       </View>
@@ -133,16 +150,19 @@ const styles = StyleSheet.create({
     height: Dimensions.get('window').height - 50, // Adjust for button height
     padding: 10,
   },
-  openIconContainer: {
-    padding: 10,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     backgroundColor: '#f5f5f5',
     paddingRight: 10,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    padding: 10,
+  },
 });
 
 export default App;
-
