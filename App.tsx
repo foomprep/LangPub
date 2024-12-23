@@ -1,5 +1,5 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Button, Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
 import { unzipFromContentUri } from './zip';
 import RNFS from 'react-native-fs';
@@ -12,6 +12,7 @@ import {
   PanGestureHandler, 
   PanGestureHandlerGestureEvent 
 } from 'react-native-gesture-handler';
+import Icon from '@react-native-vector-icons/material-design-icons';
 
 const ReaderComponent = () => {
   const [chapters, setChapters] = useState<Chapter[] | undefined>(undefined);
@@ -72,6 +73,11 @@ const ReaderComponent = () => {
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={handleSelectBook} style={styles.openIconContainer}>
+            <Icon name="book-open-variant" size={30} color="#000" />
+          </Pressable>
+        </View>
         <PanGestureHandler 
           onGestureEvent={handleGesture}
           activeOffsetX={[-20, 20]}
@@ -102,7 +108,17 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height - 50, // Adjust for button height
     padding: 10,
-  }
+  },
+  openIconContainer: {
+    padding: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    backgroundColor: '#f5f5f5',
+    paddingRight: 10,
+  },
 });
 
 export default App;
+

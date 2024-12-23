@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Text, View, StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
+import { Text, View, StyleSheet, Image, TouchableOpacity, Modal, Button } from 'react-native';
 import { DOMParser } from '@xmldom/xmldom';
 import { translateText } from './translation';
 import { FlashList } from '@shopify/flash-list';
 import { Language, getReactNativeSound } from './transcription';
 import Sound from 'react-native-sound';
 import RNFS from 'react-native-fs';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import Icon from '@react-native-vector-icons/material-design-icons';
 
 Sound.setCategory('Playback');
 
@@ -314,9 +314,8 @@ const HtmlToRNConverter = ({
               <Text>{originalText}</Text>
               <Text style={defaultStyles.bold}>{translatedText}</Text>
             </View>
-            <MaterialDesignIcons
+            <Icon
               name="volume-high"
-              size={30}
               onPress={() => {
                 if (audioData) {
                   audioData.sound.play();
