@@ -7,56 +7,96 @@ interface ProcessResult {
   content?: string;
   chapters?: Chapter[];
   error?: string;
+  metadata?: {
+    title: string;
+    creator: string;
+    publisher: string;
+    language: string;
+    description?: string;
+  };
+}
+
+interface ManifestItem {
+  id: string;
+  href: string;
+  mediaType: string;
 }
 
 /**
- * Processes EPUB content and concatenates body content from referenced files
- * @param htmlContent - The HTML string containing the EPUB table of contents
+ * Processes EPUB content using the content.opf file
+ * @param opfContent - The XML string containing the EPUB content.opf
  * @param epubPath - The base path where the EPUB files are located
  * @returns Promise resolving to ProcessResult containing the concatenated content or error
  */
 export const processEpubContent = async (
-  htmlContent: string,
+  opfContent: string,
   epubPath: string
 ): Promise<ProcessResult> => {
   try {
     // Create an XML parser
     const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const doc = parser.parseFromString(opfContent, 'application/xml');
 
-    // Find all chapter links in the table of contents
-    const tocNav = doc.getElementsByTagName('nav')[0];
-    const chapterLinks = tocNav.getElementsByTagName('a');
+    // Extract metadata
+    const metadata = {
+      title: getElementText(doc, 'dc:title'),
+      creator: getElementText(doc, 'dc:creator'),
+      publisher: getElementText(doc, 'dc:publisher'),
+      language: getElementText(doc, 'dc:language'),
+      description: getElementText(doc, 'dc:description'),
+    };
+
+    // Parse manifest items
+    const manifestItems = new Map<string, ManifestItem>();
+    const manifestElements = doc.getElementsByTagName('item');
     
-    if (!chapterLinks.length) {
-      throw new Error('No chapters found in the table of contents');
+    for (let i = 0; i < manifestElements.length; i++) {
+      const item = manifestElements[i];
+      const id = item.getAttribute('id');
+      const href = item.getAttribute('href');
+      const mediaType = item.getAttribute('media-type');
+      
+      if (id && href && mediaType?.includes('html')) {
+        manifestItems.set(id, {
+          id,
+          href,
+          mediaType
+        });
+      }
     }
 
+    // Get reading order from spine
+    const spineElements = doc.getElementsByTagName('itemref');
     const chapters: Chapter[] = [];
     let concatenatedContent = '';
 
-    // Process each chapter
-    for (let i = 0; i < chapterLinks.length; i++) {
-      const link = chapterLinks[i];
-      const href = link.getAttribute('href');
-      const title = link.textContent || '';
+    // Process each chapter in spine order
+    for (let i = 0; i < spineElements.length; i++) {
+      const itemref = spineElements[i];
+      const idref = itemref.getAttribute('idref');
+      
+      if (!idref) continue;
+      
+      const manifestItem = manifestItems.get(idref);
+      if (!manifestItem) continue;
 
-      if (!href) {
-        console.warn(`Skipping chapter "${title}" - no href found`);
-        continue;
-      }
-
-      const chapterPath = `${epubPath}/${href}`;
+      const chapterPath = `${epubPath}/${manifestItem.href}`;
       
       try {
         // Read the chapter file
         const chapterContent = await RNFS.readFile(chapterPath, 'utf8');
         
+        // Parse chapter content to extract title
+        const chapterDoc = parser.parseFromString(chapterContent, 'text/html');
+        const title = chapterDoc.getElementsByTagName('title')[0]?.textContent || 
+                     chapterDoc.getElementsByTagName('h1')[0]?.textContent ||
+                     `Chapter ${i + 1}`;
+        
         // Store chapter information
         chapters.push({
           title,
           content: chapterContent,
-          href
+          href: manifestItem.href
         });
         
         // Add to concatenated content with chapter title as separator
@@ -66,7 +106,7 @@ export const processEpubContent = async (
 ${chapterContent}`;
         
       } catch (chapterError) {
-        console.warn(`Error processing chapter "${title}": ${chapterError}`);
+        console.warn(`Error processing chapter "${manifestItem.href}": ${chapterError}`);
         // Continue with other chapters even if one fails
       }
     }
@@ -78,7 +118,8 @@ ${chapterContent}`;
     return {
       success: true,
       content: concatenatedContent.trim(),
-      chapters
+      chapters,
+      metadata
     };
 
   } catch (error) {
@@ -89,10 +130,14 @@ ${chapterContent}`;
   }
 };
 
+// Helper function to extract text content from a specific element
+const getElementText = (doc: Document, tagName: string): string => {
+  return doc.getElementsByTagName(tagName)[0]?.textContent || '';
+};
+
 // Helper function to extract text content from HTML string
 export const stripHtml = (html: string): string => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   return doc.getElementsByTagName('body')[0]?.textContent || '';
 };
-

@@ -58,7 +58,7 @@ const ReaderComponent = () => {
       })
       const unzipped = await unzipFromContentUri(result.uri);
       if (unzipped.outputPath) {
-        const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/contents.xhtml');
+        const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/content.opf');
         const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
         if (result.success) {
           setChapters(result.chapters);
