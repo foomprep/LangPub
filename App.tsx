@@ -1,5 +1,5 @@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Button, Dimensions, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Dimensions, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
 import { unzipFromContentUri } from './zip';
 import RNFS from 'react-native-fs';
@@ -20,7 +20,6 @@ const ReaderComponent = () => {
   const [hasChangedChapter, setHasChangedChapter] = useState(false);
 
   const handleGesture = (event: PanGestureHandlerGestureEvent) => {
-    // Only handle horizontal gestures
     if (Math.abs(event.nativeEvent.velocityY) > Math.abs(event.nativeEvent.velocityX)) {
       return;
     }
@@ -29,14 +28,12 @@ const ReaderComponent = () => {
     const TRANSLATION_THRESHOLD = 150;
     const NEW_GESTURE_THRESHOLD = 75;
 
-    // Only consider it a new gesture if there's a larger position difference
     if (lastX === null || Math.abs(event.nativeEvent.absoluteX - lastX) > NEW_GESTURE_THRESHOLD) {
       setHasChangedChapter(false);
       setLastX(event.nativeEvent.absoluteX);
     }
     
     if (!hasChangedChapter) {
-      // Require both velocity AND translation thresholds for faster swipes
       const meetsThreshold = 
         Math.abs(event.nativeEvent.velocityX) > VELOCITY_THRESHOLD && 
         Math.abs(event.nativeEvent.translationX) > TRANSLATION_THRESHOLD;
@@ -55,7 +52,7 @@ const ReaderComponent = () => {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View>
+      <View style={styles.container}>
         <Button
           title="open file"
           onPress={async () => {
@@ -73,21 +70,17 @@ const ReaderComponent = () => {
                 }
               }
             } catch (err) {
-              // see error handling
+              console.error('Error opening file:', err);
             }
           }}
         />
         <PanGestureHandler 
           onGestureEvent={handleGesture}
-          activeOffsetX={[-20, 20]} // Only activate for horizontal movements
-          failOffsetY={[-20, 20]} // Fail the gesture if vertical movement occurs first
+          activeOffsetX={[-20, 20]}
+          failOffsetY={[-20, 20]}
         >
           <View style={styles.bookContainer}>
-            <ScrollView>
-              {chapters && 
-                <HtmlToRNConverter html={chapters[chapterIndex].content} />
-              }
-            </ScrollView>
+            {chapters && <HtmlToRNConverter html={chapters[chapterIndex].content} />}
           </View>
         </PanGestureHandler>
       </View>
@@ -103,15 +96,15 @@ const App = () => {
   );
 };
 
-export default App;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   bookContainer: {
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height - 50, // Adjust for button height
     padding: 10,
   }
-})
+});
+
+export default App;

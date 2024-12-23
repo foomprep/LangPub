@@ -2,7 +2,7 @@ import React, { ReactElement, useState } from 'react';
 import { Text, View, StyleSheet, Image, TouchableOpacity, Modal } from 'react-native';
 import { DOMParser } from '@xmldom/xmldom';
 import { translateText } from './translation';
-import WordWrapper from './WordWrapper';
+import { FlashList } from '@shopify/flash-list';
 
 interface ConversionStyles {
   text?: object;
@@ -12,37 +12,13 @@ interface ConversionStyles {
   image?: object;
 }
 
-interface ConversionResult {
-  success: boolean;
-  component?: React.ReactNode;
-  error?: string;
+interface HTMLElement {
+  type: string;
+  content: string | React.ReactNode | Array<{word: string, index: number}>;  // Modified to allow word arrays
+  style?: any;
+  onPress?: (word?: string) => void;
 }
 
-const getTextFromElement = (element: any): string => {
-  if (!element) return '';
-  
-  // If it's a text element
-  if (typeof element === 'string') return element;
-  
-  // If it's a React element
-  if (element.props) {
-    if (typeof element.props.children === 'string') {
-      return element.props.children;
-    }
-    if (Array.isArray(element.props.children)) {
-      return element.props.children
-        .map((child: any) => getTextFromElement(child))
-        .join('');
-    }
-    return getTextFromElement(element.props.children);
-  }
-  
-  return '';
-};
-
-/**
- * Converts HTML string to React Native components
- */
 const HtmlToRNConverter = ({
   html,
   customStyles = {},
@@ -109,31 +85,92 @@ const HtmlToRNConverter = ({
     const translation = await translateText("French", text);
     setModalText(translation.translated_text);
     setModalVisible(true);
-  }
+  };
 
-  const parseNode = (node: any): React.ReactNode => {
-    if (!node) return null;
+  const renderElement = ({ item }: { item: HTMLElement }) => {
+    switch (item.type) {
+      case 'text':
+        return <Text style={item.style}>{item.content}</Text>;
+      
+      case 'paragraph':
+        if (Array.isArray(item.content)) {
+          return (
+            <View style={[defaultStyles.paragraph, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+              {item.content.map(({ word, index }) => (
+                <TouchableOpacity
+                  key={`word-${index}`}
+                  onPress={() => item.onPress?.(word)}
+                  style={{ marginRight: 4, marginBottom: 4 }}
+                >
+                  <Text style={[defaultStyles.text, item.style]}>
+                    {word}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        }
+        return (
+          <View style={defaultStyles.paragraph}>
+            <Text style={[defaultStyles.text, item.style]}>{item.content}</Text>
+          </View>
+        );
+      
+      case 'heading1':
+        return <Text style={[defaultStyles.heading1, item.style]}>{item.content}</Text>;
+      
+      case 'heading2':
+        return (
+          <TouchableOpacity onPress={item.onPress}>
+            <Text style={[defaultStyles.heading2, item.style]}>{item.content}</Text>
+          </TouchableOpacity>
+        );
+      
+      case 'heading3':
+        return <Text style={[defaultStyles.heading3, item.style]}>{item.content}</Text>;
+      
+      case 'image':
+        return (
+          <Image
+            source={{ uri: (item.content as any).src }}
+            style={[defaultStyles.image, item.style]}
+            accessible={true}
+            accessibilityLabel={(item.content as any).alt || 'Image'}
+          />
+        );
+      
+      default:
+        return <Text style={defaultStyles.text}>{item.content}</Text>;
+    }
+  };
+
+  const parseNode = (node: any): HTMLElement[] => {
+    if (!node) return [];
 
     // Handle text nodes
-    if (node.nodeType === 3) { // Text node
-      return node.nodeValue?.trim() ? (
-        <Text style={defaultStyles.text}>{node.nodeValue}</Text>
-      ) : null;
+    if (node.nodeType === 3) {
+      return node.nodeValue?.trim() 
+        ? [{ type: 'text', content: node.nodeValue, style: defaultStyles.text }]
+        : [];
     }
 
-    if (node.nodeType !== 1) { // Not an element node
-      return null;
-    }
+    if (node.nodeType !== 1) return [];
 
-    const children = Array.from(node.childNodes || []).map((child: any, index: number) => (
-      <React.Fragment key={index}>{parseNode(child)}</React.Fragment>
-    ));
+    const children = Array.from(node.childNodes || [])
+      .map(parseNode)
+      .flat();
+
+    const extractText = (elements: HTMLElement[]): string => {
+      return elements
+        .map(el => typeof el.content === 'string' ? el.content : '')
+        .join('');
+    };
 
     switch (node.nodeName.toLowerCase()) {
       case 'div':
       case 'article':
       case 'section':
-        return <View style={defaultStyles.container}>{children}</View>;
+        return children;
 
       case 'p':
         const paragraphText = Array.from(node.childNodes)
@@ -141,84 +178,77 @@ const HtmlToRNConverter = ({
           .join('')
           .trim();
         
-        return (
-          <View 
-            style={defaultStyles.paragraph}
-            pointerEvents="box-none"
-          >
-            <WordWrapper
-              text={paragraphText}
-              textStyle={defaultStyles.text}
-              onWordPress={(word) => handleTranslation(word)}
-              preserveWhitespace={true}
-            />
-          </View>
-        );
+        // Split text into words and create word objects
+        const words = paragraphText.split(/\s+/).map((word, index) => ({
+          word,
+          index
+        }));
+
+        return [{
+          type: 'paragraph',
+          content: words,
+          style: defaultStyles.paragraph,
+          onPress: handleTranslation
+        }];
 
       case 'h1':
-        return <Text style={defaultStyles.heading1}>{children}</Text>;
+        return [{
+          type: 'heading1',
+          content: extractText(children),
+          style: defaultStyles.heading1
+        }];
 
       case 'h2':
-        return (
-          <TouchableOpacity onPress={() => {
-            const extractedText = Array.from(node.childNodes)
-              .map((child: any) => child.nodeValue || '')
-              .join('')
-              .trim();
-            handleTranslation(extractedText);
-          }}>
-            <Text style={defaultStyles.heading2}>
-              {children}
-            </Text>
-          </TouchableOpacity>
-        );
+        const h2Text = extractText(children);
+        return [{
+          type: 'heading2',
+          content: h2Text,
+          style: defaultStyles.heading2,
+          onPress: () => handleTranslation(h2Text)
+        }];
 
       case 'h3':
-        return <Text style={defaultStyles.heading3}>{children}</Text>;
+        return [{
+          type: 'heading3',
+          content: extractText(children),
+          style: defaultStyles.heading3
+        }];
+
+      case 'img':
+        return [{
+          type: 'image',
+          content: {
+            src: node.getAttribute('src'),
+            alt: node.getAttribute('alt')
+          },
+          style: defaultStyles.image
+        }];
 
       case 'strong':
       case 'b':
-        return <Text style={defaultStyles.bold}>{children}</Text>;
+        return [{
+          type: 'text',
+          content: extractText(children),
+          style: defaultStyles.bold
+        }];
 
       case 'em':
       case 'i':
-        return <Text style={defaultStyles.italic}>{children}</Text>;
-
-      case 'u':
-        return <Text style={defaultStyles.underline}>{children}</Text>;
+        return [{
+          type: 'text',
+          content: extractText(children),
+          style: defaultStyles.italic
+        }];
 
       case 'br':
-        return <Text>{'\n'}</Text>;
-
-      case 'img':
-        return (
-          <Image
-            source={{ uri: node.getAttribute('src') }}
-            style={defaultStyles.image}
-            accessible={true}
-            accessibilityLabel={node.getAttribute('alt') || 'Image'}
-          />
-        );
-
-      case 'ul':
-      case 'ol':
-        return <View style={defaultStyles.list}>{children}</View>;
-
-      case 'li':
-        return (
-          <View style={defaultStyles.listItem}>
-            <Text style={defaultStyles.text}>• </Text>
-            <Text style={defaultStyles.text}>{children}</Text>
-          </View>
-        );
+        return [{ type: 'text', content: '\n' }];
 
       default:
-        // For unknown elements, wrap in Text component
-        return <Text style={defaultStyles.text}>{children}</Text>;
+        return children;
     }
   };
 
-  const convertHtmlToRN = (htmlContent: string): ConversionResult => {
+  const convertHtmlToElements = (htmlContent: string): HTMLElement[] => {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, 'text/html');
@@ -228,30 +258,25 @@ const HtmlToRNConverter = ({
         throw new Error('No body tag found in HTML content');
       }
 
-      const component = parseNode(body);
-
-      return {
-        success: true,
-        component,
-      };
+      return parseNode(body);
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      };
+      console.error('Error converting HTML:', error);
+      return [{ type: 'text', content: 'Error converting HTML content' }];
     }
   };
 
-  const result = convertHtmlToRN(html);
-
-  if (!result.success) {
-    console.error('Error converting HTML:', result.error);
-    return <Text>Error converting HTML content</Text>;
-  }
+  const elements = convertHtmlToElements(html);
 
   return (
     <>
-      {result.component as ReactElement}
+      <View style={{ flex: 1 }}>
+        <FlashList
+          data={elements}
+          renderItem={renderElement}
+          estimatedItemSize={50}
+          keyExtractor={(_, index) => index.toString()}
+        />
+      </View>
       <Modal
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
@@ -273,4 +298,3 @@ const HtmlToRNConverter = ({
 };
 
 export default HtmlToRNConverter;
-
