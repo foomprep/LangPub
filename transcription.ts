@@ -6,13 +6,24 @@ Sound.setCategory('Playback');
 export enum Language {
   FRENCH = "French",
   ENGLISH = "English",
-  GERMAN = "German",
-  SPANISH = "Spanish", 
+  GERMAN = "German",  
+  SPANISH = "Spanish",
   ITALIAN = "Italian",
   JAPANESE = "Japanese",
   PORTUGUESE = "Portuguese",
   CHINESE = "Chinese"
 }
+
+export const languageToKeyMap = new Map<string, Language>([
+  ["Chinese", Language.CHINESE], 
+  ["Portuguese", Language.PORTUGUESE], 
+  ["Japanese", Language.JAPANESE], 
+  ["Italian", Language.ITALIAN], 
+  ["Spanish", Language.SPANISH], 
+  ["German", Language.GERMAN], 
+  ["English", Language.ENGLISH], 
+  ["French", Language.FRENCH]
+]);
 
 async function generateSpeech(language: Language, text: string) {
   try {

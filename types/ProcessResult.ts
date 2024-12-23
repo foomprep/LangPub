@@ -1,3 +1,4 @@
+import { Language } from "../transcription";
 import Chapter from "./Chapter";
 
 export default interface ProcessResult {
@@ -9,7 +10,7 @@ export default interface ProcessResult {
     title: string;
     creator: string;
     publisher: string;
-    language: string;
+    language: string | Language;
     description?: string;
   };
 }

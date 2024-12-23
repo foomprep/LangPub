@@ -13,15 +13,10 @@ import {
 } from 'react-native-gesture-handler';
 import Icon from '@react-native-vector-icons/material-design-icons';
 import TableOfContents from './TableOfContents';
-import { Language } from './transcription';
 import ProcessResult from './types/ProcessResult';
 import { findContentOpf, getDirname } from './utils';
-
-const langMap = {
-  'de': Language.GERMAN,
-  'fr': Language.FRENCH,
-  'es': Language.SPANISH,
-};
+import { getLanguage } from './translation';
+import { Language, languageToKeyMap } from './transcription';
 
 const ReaderComponent = () => {
   const [processResult, setProcessResult] = useState<ProcessResult | undefined>(undefined);
@@ -34,7 +29,6 @@ const ReaderComponent = () => {
     if (Math.abs(event.nativeEvent.velocityY) > Math.abs(event.nativeEvent.velocityX)) {
       return;
     }
-
     const VELOCITY_THRESHOLD = 500;
     const TRANSLATION_THRESHOLD = 150;
     const NEW_GESTURE_THRESHOLD = 75;
@@ -72,8 +66,10 @@ const ReaderComponent = () => {
         if (contentOpfPath) {
           const contents = await RNFS.readFile(contentOpfPath);
           const processResult: ProcessResult = await processEpubContent(contents, getDirname(contentOpfPath));
-          console.log(processResult.metadata?.language);
           if (processResult.success) {
+            const response = await getLanguage(processResult.chapters![4].content);
+            console.log(response);
+            processResult.metadata!.language = languageToKeyMap.get(response.language as string);
             setProcessResult(processResult);
             setChapterIndex(0);
           }
@@ -111,7 +107,7 @@ const ReaderComponent = () => {
               processResult.metadata?.language && 
                 <HtmlToRNConverter 
                     html={processResult.chapters[chapterIndex].content} 
-                    language={langMap[processResult.metadata.language]}
+                    language={processResult.metadata.language as Language}
                 />
             }
           </View>

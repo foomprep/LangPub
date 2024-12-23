@@ -10,3 +10,15 @@ export async function translateText(language: string, text: string): Promise<any
   return await response.json();
 }
 
+export async function getLanguage(html: string): Promise<any> {
+  const response = await fetch('https://tongues.directto.link/language', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ html })
+  });
+
+  return await response.json();
+}
+
