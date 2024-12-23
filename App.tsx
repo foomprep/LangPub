@@ -3,19 +3,25 @@ import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { pick } from 'react-native-document-picker';
 import { unzipFromContentUri } from './zip';
 import RNFS from 'react-native-fs';
-import { processEpubContent } from './epubParser';
+import { ProcessResult, processEpubContent } from './epubParser';
 import { useState } from 'react';
 import HtmlToRNConverter from './HTMLToRNConverter';
-import Chapter from './types/Chapter';
 import { 
   GestureHandlerRootView, 
   PanGestureHandler, 
   PanGestureHandlerGestureEvent 
 } from 'react-native-gesture-handler';
 import Icon from '@react-native-vector-icons/material-design-icons';
+import { Language } from './transcription';
+
+const langMap = {
+  'de': Language.GERMAN,
+  'fr': Language.FRENCH,
+  'es': Language.SPANISH,
+};
 
 const ReaderComponent = () => {
-  const [chapters, setChapters] = useState<Chapter[] | undefined>(undefined);
+  const [processResult, setProcessResult] = useState<ProcessResult | undefined>(undefined);
   const [chapterIndex, setChapterIndex] = useState<number>(0);
   const [lastX, setLastX] = useState<number | null>(null);
   const [hasChangedChapter, setHasChangedChapter] = useState(false);
@@ -43,7 +49,7 @@ const ReaderComponent = () => {
         if (event.nativeEvent.translationX > 0 && chapterIndex > 0) {
           setChapterIndex(chapterIndex - 1);
           setHasChangedChapter(true);
-        } else if (event.nativeEvent.translationX < 0 && chapterIndex < (chapters?.length ?? 0) - 1) {
+        } else if (event.nativeEvent.translationX < 0 && chapterIndex < (processResult?.chapters?.length ?? 0) - 1) {
           setChapterIndex(chapterIndex + 1);
           setHasChangedChapter(true);
         }
@@ -55,21 +61,20 @@ const ReaderComponent = () => {
     try {
       const [result] = await pick({
         mode: 'open',
-      })
+      });
       const unzipped = await unzipFromContentUri(result.uri);
       if (unzipped.outputPath && await RNFS.exists(unzipped.outputPath + '/content.opf')) {
         const contents = await RNFS.readFile(unzipped.outputPath + '/content.opf');
-        const result = await processEpubContent(contents, unzipped.outputPath);
-        console.log(result);
-        if (result.success) {
-          setChapters(result.chapters);
+        const processResult: ProcessResult = await processEpubContent(contents, unzipped.outputPath);
+        if (processResult.success) {
+          setProcessResult(processResult);
           setChapterIndex(0);
         }
       } else if (await RNFS.exists(unzipped.outputPath + '/OPS/content.opf')) {
         const contents = await RNFS.readFile(unzipped.outputPath + '/OPS/content.opf');
-        const result = await processEpubContent(contents, unzipped.outputPath + '/OPS');
-        if (result.success) {
-          setChapters(result.chapters);
+        const processResult = await processEpubContent(contents, unzipped.outputPath + '/OPS');
+        if (processResult.success) {
+          setProcessResult(processResult);
           setChapterIndex(0);
         }
       } else {
@@ -95,7 +100,15 @@ const ReaderComponent = () => {
           failOffsetY={[-20, 20]}
         >
           <View style={styles.bookContainer}>
-            {chapters && <HtmlToRNConverter html={chapters[chapterIndex].content} />}
+            { processResult && 
+              processResult.chapters && 
+              processResult.metadata?.language && 
+                <HtmlToRNConverter 
+                    html={processResult.chapters[chapterIndex].content} 
+                    language={langMap[processResult.metadata.language]}
+                />
+            }
+
           </View>
         </PanGestureHandler>
       </View>

@@ -32,9 +32,11 @@ interface AudioData {
 
 const HtmlToRNConverter = ({
   html,
+  language,
   customStyles = {},
 }: {
   html: string;
+  language: Language,
   customStyles?: ConversionStyles;
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -95,12 +97,12 @@ const HtmlToRNConverter = ({
   });
 
   const handleTranslation = async (text: string) => {
-    const translation = await translateText("French", text);
+    const translation = await translateText(language, text);
     const processedText = text.split(' ').length === 1 ? text.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '') : text;
     setOriginalText(processedText);
     setTranslatedText(translation.translated_text);
     setModalVisible(true);
-    setAudioData(await getReactNativeSound(Language.FRENCH, processedText));
+    setAudioData(await getReactNativeSound(language, processedText));
   };
 
 
