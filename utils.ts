@@ -51,3 +51,39 @@ export const createBase64DataUri = async (uri: string) => {
 export const getDirname = (filePath: string): string => {
     return filePath.substring(0, filePath.lastIndexOf('/'));
 }
+
+import { DOMParser } from '@xmldom/xmldom';
+
+export function findLongParagraph(html: string): string | null {
+  try {
+    // Create parser and parse HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Get all paragraph elements
+    const paragraphs = doc.getElementsByTagName('p');
+    
+    // Iterate through paragraphs
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i];
+      
+      // Get text content from the paragraph
+      const text = Array.from(paragraph.childNodes)
+        .map(node => node.nodeValue || '')
+        .join('')
+        .trim();
+      
+      // Check if text meets length requirement
+      if (text.length > 100) {
+        return text;
+      }
+    }
+    
+    // No paragraph found meeting criteria
+    return null;
+    
+  } catch (error) {
+    console.error('Error parsing HTML:', error);
+    return null;
+  }
+}

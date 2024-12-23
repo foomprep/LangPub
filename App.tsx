@@ -14,7 +14,7 @@ import {
 import Icon from '@react-native-vector-icons/material-design-icons';
 import TableOfContents from './TableOfContents';
 import ProcessResult from './types/ProcessResult';
-import { findContentOpf, getDirname } from './utils';
+import { findContentOpf, findLongParagraph, getDirname } from './utils';
 import { getLanguage } from './translation';
 import { Language, languageToKeyMap } from './transcription';
 
@@ -67,8 +67,12 @@ const ReaderComponent = () => {
           const contents = await RNFS.readFile(contentOpfPath);
           const processResult: ProcessResult = await processEpubContent(contents, getDirname(contentOpfPath));
           if (processResult.success) {
-            const response = await getLanguage(processResult.chapters![4].content);
-            console.log(response);
+            const excerpt = findLongParagraph(processResult.chapters![2].content);
+            console.log(excerpt);
+            if (!excerpt) {
+              throw Error("Excerpt not found.");
+            }
+            const response = await getLanguage(excerpt);
             processResult.metadata!.language = languageToKeyMap.get(response.language as string);
             setProcessResult(processResult);
             setChapterIndex(0);
