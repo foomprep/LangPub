@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -161,6 +162,7 @@ fun EpubViewer(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
                             .padding(vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -232,7 +234,7 @@ fun EpubViewer(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(max = 200.dp)
+                                        .weight(1f)
                                 ) {
                                     Text(
                                         text = tenses,
