@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# pprog config
+pprog.toml
+
